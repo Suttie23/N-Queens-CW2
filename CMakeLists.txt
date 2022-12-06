@@ -7,4 +7,5 @@ find_package(OpenMP)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
-add_executable(NQueens nqueens.cpp)
+add_executable(serialNQueens nqueens.cpp)
+add_executable(serialNQueensNonRec nqueensNonRec.cpp)
