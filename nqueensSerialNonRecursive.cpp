@@ -111,7 +111,7 @@ int main(int argc, char** argv)
 {
     // Get all solutions
     {
-        for (int N = 4; N < 15; ++N)
+        for (int N = 4; N < 11; ++N)
             calculateAllSolutions(N, false);
     }
 
