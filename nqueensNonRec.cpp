@@ -9,7 +9,8 @@
 // Stack for use in backtracking
 #include <stack>
 
-using namespace std; 
+using namespace std;
+using namespace std::chrono;
 
 // check if the chessboard is valid so far, for row in [0,lastPlacedRow]
 bool boardIsValidSoFar(int lastPlacedRow, const std::vector<int>& gameBoard)
@@ -38,6 +39,7 @@ void calculateSolutionsNonRecursive(std::vector<int>& gameBoard, int N, std::vec
     // Stack to indicate the position of the queens
     std::stack<std::pair<int, int>> queenStack = std::stack<std::pair<int, int>>();
 
+    auto start = high_resolution_clock::now();
     int writeToRow = 0;
     for (int i = 0; i < N; i++)
     {
@@ -68,6 +70,12 @@ void calculateSolutionsNonRecursive(std::vector<int>& gameBoard, int N, std::vec
                 break;
         }
     }
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+
+    cout << "Solution found in: "
+        << duration.count() / 1000 << "s" << endl;
+
 }
 
 // Calculate all solutions given the size of the chessboard
@@ -78,7 +86,7 @@ void calculateAllSolutions(int N, bool print)
 
     calculateSolutionsNonRecursive(gameBoard, N, solutions);
 
-    printf("N=%d, solutions=%d\n", N, int(solutions.size()));
+    printf("N=%d, solutions=%d\n\n", N, int(solutions.size()));
     
     if (print)
     {
@@ -101,6 +109,10 @@ void calculateAllSolutions(int N, bool print)
 
 int main(int argc, char** argv)
 {
-    for (int N = 4; N < 15; ++N)
-        calculateAllSolutions(N, false);
+    // Get all solutions
+    {
+        for (int N = 4; N < 15; ++N)
+            calculateAllSolutions(N, false);
+    }
+
 }
