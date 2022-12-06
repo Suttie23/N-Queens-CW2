@@ -115,4 +115,37 @@ int main(int argc, char** argv)
             calculateAllSolutions(N, false);
     }
 
+    /*
+    // Input Specific N for solution
+    {
+        int n;
+        char c;
+
+        do
+        {
+            cout << "-= NQueens Puzzle Solutions\n";
+            cout << "-= WARNING: N > 13 will take longer to process \n";
+            cout << "-= N = 14 took about 4 minutes on my computer \n\n";
+
+            do
+            {
+                cout << "\tEnter an between 3 and 15 (not-inclusive) \n";
+                cout << "\nN = ";
+                cin >> n;
+                if (n < 4 || n > 14)
+                    cout << "INVALID!\n";
+            } while (n < 4 || n > 14);
+
+            calculateAllSolutions(n, false);
+
+            cout << "Solve another N-Queen Puzzle (Y/N) ? ";
+            cin >> c;
+
+            cout << "\n\n";
+        } while (c != 'N' && c != 'n');
+
+        system("PAUSE");
+        return 0;
+    }
+    */
 }
