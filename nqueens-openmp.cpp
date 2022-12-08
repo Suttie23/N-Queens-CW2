@@ -18,13 +18,20 @@ bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
 {
     // Last placed column
     int lastPlacedColumn = gameBoard[lastPlacedRow];
+    volatile bool valid = true;
 
+
+#pragma omp parallel for num_threads(std::thread::hardware_concurrency())
     // Iterating to determine whether the board is valid
     for (int row = 0; row < lastPlacedRow; ++row)
     {
+        if (!valid)
+            continue;
+
         // If the row is the same as the last column, then the board is not valid
         if (gameBoard[row] == lastPlacedColumn)
-            return false;
+            //return false;
+        valid = false;
 
         // check the 2 diagonals
         const auto col1 = lastPlacedColumn - (lastPlacedRow - row);
@@ -32,10 +39,12 @@ bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
 
         // If the row is the came as column 1 or 2, the board is not valid
         if (gameBoard[row] == col1 || gameBoard[row] == col2)
-            return false;
+            //return false;
+        valid = false;
     }
     // The board is valid if nothing is flagged previously
-    return true;
+    //return true;
+    return valid;
 }
 
 // Calculate the solutions
@@ -48,16 +57,17 @@ void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
     int* solutionArr = (int*)malloc(pow(N, 5) * sizeof(int)); // Determining array size 
     int no_of_sols = 0;
 
+    // Could be scheduled?
 #pragma omp parallel for num_threads(std::thread::hardware_concurrency())
-    // Columns
+
+    // Checking Queen Positions
     for (long long int i = 0; i < O; i++) {
         bool valid = true;
 
         // Game Board array
         int gameBoard[N_MAX];
         long long int column = i;
-
-        // Rows
+      
         for (int j = 0; j < N; j++) {
             gameBoard[j] = column % N;
 
