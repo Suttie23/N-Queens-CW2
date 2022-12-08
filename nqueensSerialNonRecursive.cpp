@@ -32,7 +32,7 @@ bool boardIsValidSoFar(int lastPlacedRow, const std::vector<int>& gameBoard)
     return true;
 }
 
-// Using backtracking to brute force the soluton
+// Attempting to Use backtracking to brute force the soluton
 // Essentially, the alogorithm will create solition candidates, and if they are deemed invalid, will abandon them while keeping those that are valid
 void calculateSolutionsNonRecursive(std::vector<int>& gameBoard, int N, std::vector<std::vector<int>>& solutions)
 {
