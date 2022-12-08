@@ -57,8 +57,29 @@ void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
     int* solutionArr = (int*)malloc(pow(N, 5) * sizeof(int)); // Determining array size 
     int no_of_sols = 0;
 
-    // Could be scheduled?
+/*
+//Static Scheduling
+// to a thread
+#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(static)
+*/
+
+/*
+//Dynamic Scheduling
+#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(dynamic)
+*/
+
+/*
+//Guided Scheduling
+#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(guided)
+*/
+
+/*
+//Default Scheduling
 #pragma omp parallel for num_threads(std::thread::hardware_concurrency())
+*/
+
+// guided scheduling was used here - after testing each and getting the average performance, guided returned the best performance. 
+#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(guided)
 
     // Checking Queen Positions
     for (long long int i = 0; i < O; i++) {
