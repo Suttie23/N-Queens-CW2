@@ -21,17 +21,17 @@ bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
     volatile bool valid = true;
 
 
-#pragma omp parallel for num_threads(std::thread::hardware_concurrency())
+//#pragma omp parallel for num_threads(std::thread::hardware_concurrency())
     // Iterating to determine whether the board is valid
     for (int row = 0; row < lastPlacedRow; ++row)
     {
-        if (!valid)
-            continue;
+        //if (!valid)
+            //continue;
 
         // If the row is the same as the last column, then the board is not valid
         if (gameBoard[row] == lastPlacedColumn)
-            //return false;
-        valid = false;
+            return false;
+        //valid = false;
 
         // check the 2 diagonals
         const auto col1 = lastPlacedColumn - (lastPlacedRow - row);
@@ -39,12 +39,12 @@ bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
 
         // If the row is the came as column 1 or 2, the board is not valid
         if (gameBoard[row] == col1 || gameBoard[row] == col2)
-            //return false;
-        valid = false;
+            return false;
+        //valid = false;
     }
     // The board is valid if nothing is flagged previously
-    //return true;
-    return valid;
+    return true;
+    //return valid;
 }
 
 // Calculate the solutions
