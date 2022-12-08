@@ -8,6 +8,7 @@
 #include <iomanip>
 
 using namespace std;
+using namespace std::chrono;
 
 /*
 *   The below N-Queens chessboard formulation is as follows:
@@ -51,6 +52,7 @@ bool boardIsValidSoFar(int lastPlacedRow, const std::vector<int>& gameBoard)
 // A recursive function to calculate solutions
 void calculateSolutionsRecursive(int writeToRow, std::vector<int>& gameBoard, int N, std::vector<std::vector<int>>& solutions)
 {
+    auto start = high_resolution_clock::now();
     // for each column
     for (int i = 0; i < N; ++i)
     {
@@ -66,6 +68,7 @@ void calculateSolutionsRecursive(int writeToRow, std::vector<int>& gameBoard, in
                 solutions.push_back(gameBoard);
         }
     }
+
 }
 
 // Calculate all solutions given the size of the chessboard
@@ -73,8 +76,18 @@ void calculateAllSolutions(int N, bool print)
 {
     std::vector<std::vector<int>> solutions;
     std::vector<int> gameBoard(N, 0);
+
+
+    auto start = std::chrono::system_clock::now();
     calculateSolutionsRecursive(0, gameBoard, N, solutions);
-    printf("N=%d, solutions=%d\n", N, int(solutions.size()));
+    auto stop = std::chrono::system_clock::now();
+
+    auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+#ifdef _WIN32
+    std::cout << "N=" << N << " time elapsed: " << time_elapsed.count() / 1000.0 << "\xE6s\n";
+#else
+    std::cout << "N=" << N << " time elapsed: " << time_elapsed.count() / 1000.0 << "\xC2\xB5s\n";
+#endif
 
     if (print)
     {
@@ -98,6 +111,6 @@ void calculateAllSolutions(int N, bool print)
 
 int main(int argc, char** argv)
 {
-    for (int N = 4; N < 13; ++N)
+    for (int N = 4; N < 11; ++N)
         calculateAllSolutions(N, false);
 }
