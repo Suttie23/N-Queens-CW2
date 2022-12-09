@@ -18,79 +18,49 @@ using namespace std;
 #define N_MAX 10
 
 // Determine the validity of the board
-bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
+bool boardIsValid(const int* gameBoard, const int N)
 {
-    // Last placed column
-    int lastPlacedColumn = gameBoard[lastPlacedRow];
-    volatile bool valid = true;
-
-
-    // Iterating to determine whether the board is valid
-    for (int row = 0; row < lastPlacedRow; ++row)
-    {
-
-        // If the row is the same as the last column, then the board is not valid
-        if (gameBoard[row] == lastPlacedColumn)
-            return false;
-
-        // check the 2 diagonals
-        const auto col1 = lastPlacedColumn - (lastPlacedRow - row);
-        const auto col2 = lastPlacedColumn + (lastPlacedRow - row);
-
-        // If the row is the came as column 1 or 2, the board is not valid
-        if (gameBoard[row] == col1 || gameBoard[row] == col2)
-            return false;
-    }
-    // The board is valid if nothing is flagged previously
+    for (int i = 0; i < N; i++)
+        for (int j = i + 1; j < N; j++)
+            if (gameBoard[i] - gameBoard[j] == i - j || gameBoard[i] - gameBoard[j] == j - i || gameBoard[i] == gameBoard[j])
+                return false;
     return true;
 }
 
 // Calculate the solutions
 void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
 {
-    // For board evaluation
-    const long long int O = powl(N, N);
+    int O = pow(N, N);
 
-    // Solution array & number of solutions
-    int* solutionArr = (int*)malloc(pow(N, 5) * sizeof(int)); // Determining array size 
+    int** solutionArr = nullptr;
     int no_of_sols = 0;
 
-    // Checking all possible Queen Positions
-    for (long long int i = 0; i < O; i++) {
-        bool valid = true;
+    auto start = std::chrono::system_clock::now();
 
-        // Game Board array
-        int gameBoard[N_MAX];
-        long long int column = i;
+    for (int i = 0; i < O; i++) {
+        int* gameBoard = (int*)malloc(sizeof(int) * N);
 
+        int column = i;
         for (int j = 0; j < N; j++) {
             gameBoard[j] = column % N;
-
-            // If the board is not valid, break
-            if (!boardIsValid(j, gameBoard, N)) {
-                valid = false;
-                break;
-            }
-
-            // divide and assign to column
             column /= N;
         }
 
-        // If the board is valid, 
-        if (valid) {
-            for (int j = 0; j < N; j++)
-                solutionArr[N * no_of_sols + j] = gameBoard[j];
-            // Increment number of solutions found
+        if (boardIsValid(gameBoard, N)) {
             no_of_sols++;
+            solutionArr = (int**)realloc(solutionArr, sizeof(int*) * no_of_sols);
+            solutionArr[no_of_sols - 1] = gameBoard;
         }
     }
 
+    auto stop = std::chrono::system_clock::now();
+    auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "N=" << N << " time elapsed: " << time_elapsed.count() / 1000.0 << "s\n";
+
     // Add the solution to the solutions array
     for (int i = 0; i < no_of_sols; i++) {
-        std::vector<int> solution = std::vector<int>();
-        for (int j = 0; j < N; j++)
-            solution.push_back(solutionArr[N * i + j]);
-        solutions.push_back(solution);
+        solutions.push_back(std::vector<int>(solutionArr[i], solutionArr[i] + sizeof solutionArr[i] / sizeof solutionArr[i][0]));
+        free(solutionArr[i]);
     }
     // Free memory
     free(solutionArr);
@@ -101,20 +71,7 @@ void calculateAllSolutions(int N, bool print)
 {
     std::vector<std::vector<int>> solutions;
 
-    // Start timer
-    //auto startTime = omp_get_wtime();
-
-    // Calculate solutions
-    //calculateSolutions(N, solutions);
-
-    // End timer
-    //auto endTime = omp_get_wtime();
-
-    // Calculate time
-   // auto overallTime = endTime - startTime;
-
-    // Print to console
-    std::cout << "N=" << N << " Solution time taken: " << "overalltime" << "s\n";
+    calculateSolutions(N, solutions);
     printf("N=%d, solutions=%d\n\n", N, int(solutions.size()));
 
 }
