@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <vector>
 #include <fstream>
 #include <string>
@@ -6,9 +7,13 @@
 #include <iomanip>
 #include <stack>
 #include <thread>
-#include <omp.h>
-#include <algorithm>
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
+#include "gpuErrchk.h"
+
 using namespace std;
+
 
 #define N_MAX 10
 
@@ -20,17 +25,13 @@ bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
     volatile bool valid = true;
 
 
-//#pragma omp parallel for num_threads(std::thread::hardware_concurrency())
     // Iterating to determine whether the board is valid
     for (int row = 0; row < lastPlacedRow; ++row)
     {
-        //if (!valid)
-            //continue;
 
         // If the row is the same as the last column, then the board is not valid
         if (gameBoard[row] == lastPlacedColumn)
             return false;
-        //valid = false;
 
         // check the 2 diagonals
         const auto col1 = lastPlacedColumn - (lastPlacedRow - row);
@@ -39,11 +40,9 @@ bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
         // If the row is the came as column 1 or 2, the board is not valid
         if (gameBoard[row] == col1 || gameBoard[row] == col2)
             return false;
-        //valid = false;
     }
     // The board is valid if nothing is flagged previously
     return true;
-    //return valid;
 }
 
 // Calculate the solutions
@@ -56,30 +55,6 @@ void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
     int* solutionArr = (int*)malloc(pow(N, 5) * sizeof(int)); // Determining array size 
     int no_of_sols = 0;
 
-/*
-//Static Scheduling
-// to a thread
-#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(static)
-*/
-
-/*
-//Dynamic Scheduling
-#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(dynamic)
-*/
-
-/*
-//Guided Scheduling
-#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(guided)
-*/
-
-/*
-//Default Scheduling
-#pragma omp parallel for num_threads(std::thread::hardware_concurrency())
-*/
-
-// guided scheduling was used here - after testing each and getting the average performance, guided returned the best performance. 
-#pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(guided)
-
     // Checking all possible Queen Positions
     for (long long int i = 0; i < O; i++) {
         bool valid = true;
@@ -87,7 +62,7 @@ void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
         // Game Board array
         int gameBoard[N_MAX];
         long long int column = i;
-      
+
         for (int j = 0; j < N; j++) {
             gameBoard[j] = column % N;
 
@@ -127,19 +102,19 @@ void calculateAllSolutions(int N, bool print)
     std::vector<std::vector<int>> solutions;
 
     // Start timer
-    auto startTime = omp_get_wtime();
+    //auto startTime = omp_get_wtime();
 
     // Calculate solutions
-    calculateSolutions(N, solutions);
+    //calculateSolutions(N, solutions);
 
     // End timer
-    auto endTime = omp_get_wtime();
+    //auto endTime = omp_get_wtime();
 
     // Calculate time
-    auto overallTime = endTime - startTime;
+   // auto overallTime = endTime - startTime;
 
     // Print to console
-    std::cout << "N=" << N << " Solution time taken: " << overallTime << "s\n";
+    std::cout << "N=" << N << " Solution time taken: " << "overalltime" << "s\n";
     printf("N=%d, solutions=%d\n\n", N, int(solutions.size()));
 
 }
