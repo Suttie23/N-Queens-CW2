@@ -45,7 +45,7 @@ __device__ bool boardIsValidSoFar(int lastPlacedRow, const int* gameBoard, const
 __global__ void checkQueenPos(const int N, const long long int O, const long long int offset, int* d_solutions, int* d_no_of_sols)
 {
     // Column = threadIdx.x + blockIdx.x * blockDim.x
-    long long int column = (long long int)(threadIdx.x + blockIdx.x * blockDim.x);
+    long long int column = (long long int)(threadIdx.x + blockIdx.x * blockDim.x) + offset;
     if (column >= O)
         return;
     bool valid = true;
@@ -94,12 +94,17 @@ void calculateSolutions(const int N, std::vector<std::vector<int>>* solutions, i
     // copy host host number of solutions to device number of solutions
     cudaMemcpy(d_no_of_sols, h_no_of_sols, sizeof(int), cudaMemcpyHostToDevice);
 
+    int offset = 1;
+
     // Defining grid and blocks
-    long long int grid = (O + THREADPERBLOCK - 1) / THREADPERBLOCK;
+    int grid = THREADPERBLOCK * 2;
     int block = THREADPERBLOCK;
 
-    for (long long int i = 0; i < 1; i++) {
-        checkQueenPos << <grid, block >> > (N, O, NULL, d_solutions, d_no_of_sols); //kernel for checking the queen positions
+    if (O > grid * block)
+        offset = std::ceil((double)O / (grid * block));
+
+    for (long long int i = 0; i < offset; i++) {
+        checkQueenPos << <grid, block >> > (N, O, (long long int)grid * block * i, d_solutions, d_no_of_sols); //kernel for checking the queen positions
         cudaDeviceSynchronize(); // host device ensures device synchronisation
     }
 
