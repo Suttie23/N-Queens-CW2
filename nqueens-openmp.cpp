@@ -81,7 +81,7 @@ void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
 // guided scheduling was used here - after testing each and getting the average performance, guided returned the best performance. 
 #pragma omp parallel for num_threads(std::thread::hardware_concurrency()) schedule(guided)
 
-    // Checking Queen Positions
+    // Checking all possible Queen Positions
     for (long long int i = 0; i < O; i++) {
         bool valid = true;
 
@@ -140,7 +140,7 @@ void calculateAllSolutions(int N, bool print)
     auto overallTime = endTime - startTime;
 
     // Print to console
-    std::cout << "N=" << N << " time elapsed: " << overallTime << "s\n";
+    std::cout << "N=" << N << " Solution time taken: " << overallTime << "s\n";
     printf("N=%d, solutions=%d\n\n", N, int(solutions.size()));
 
 }
