@@ -1,5 +1,5 @@
+#include <cassert>
 #include <iostream>
-#include <algorithm>
 #include <vector>
 #include <fstream>
 #include <string>
@@ -7,127 +7,155 @@
 #include <iomanip>
 #include <stack>
 #include <thread>
+#include <algorithm>
+#include <sstream>
+#include <cmath>
+
+// CUDA Includes
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+// Error check Helper 
 #include "gpuErrchk.h"
 
-using namespace std;
 
+#define N_MAX 10 // Max size of the board (10X10)
+#define THREADPERBLOCK 512 // allocates 2D GPU threads (max 1024, 512 has been chosen as a middleground and it seems the most efficient)
 
-#define N_MAX 10
-
-// Determine the validity of the board
-bool boardIsValid(int lastPlacedRow, const int* gameBoard, const int N)
+// __device__ to indicate use on the GPU 
+__device__ bool boardIsValidSoFar(int lastPlacedRow, const int* gameBoard, const int N)
 {
-    // Last placed column
     int lastPlacedColumn = gameBoard[lastPlacedRow];
-    volatile bool valid = true;
 
-
-    // Iterating to determine whether the board is valid
+    // Check against other queens
     for (int row = 0; row < lastPlacedRow; ++row)
     {
-
-        // If the row is the same as the last column, then the board is not valid
-        if (gameBoard[row] == lastPlacedColumn)
+        if (gameBoard[row] == lastPlacedColumn) // same column, fail!
             return false;
-
         // check the 2 diagonals
         const auto col1 = lastPlacedColumn - (lastPlacedRow - row);
         const auto col2 = lastPlacedColumn + (lastPlacedRow - row);
-
-        // If the row is the came as column 1 or 2, the board is not valid
         if (gameBoard[row] == col1 || gameBoard[row] == col2)
             return false;
     }
-    // The board is valid if nothing is flagged previously
     return true;
 }
 
-// Calculate the solutions
-void calculateSolutions(int N, std::vector<std::vector<int>>& solutions)
+//__global__ to indicate use by GPU by multiple threads
+__global__ void checkQueenPos(const int N, const long long int O, const long long int offset, int* d_solutions, int* d_no_of_sols)
 {
+    // Column = threadIdx.x + blockIdx.x * blockDim.x
+    long long int column = (long long int)(threadIdx.x + blockIdx.x * blockDim.x) + offset;
+    if (column >= O)
+        return;
+    bool valid = true;
+
+    // Game Board Array
+    int gameBoard[N_MAX];
+
+    // Checking Queen Positions
+    for (int i = 0; i < N; i++) {
+        gameBoard[i] = column % N;
+
+        if (!boardIsValidSoFar(i, gameBoard, N)) {
+            valid = false;
+            break;
+        }
+
+        // divide and assign to column
+        column /= N;
+    }
+
+    // If the board is valid
+    if (valid) {
+        const int index = atomicAdd(d_no_of_sols, 1);
+        for (int i = 0; i < N; i++)
+            d_solutions[N * index + i] = gameBoard[i] + 1; // Increment number of device solutions
+    }
+}
+
+// Calculate the solutions to the problem
+void calculateSolutions(const int N, std::vector<std::vector<int>>* solutions, int* h_no_of_sols)
+{
+    // h for host variables
+    *h_no_of_sols = 0;
+    // d for device variables
+    int* d_solutions = nullptr;
+    int* d_no_of_sols = nullptr;
+
     // For board evaluation
     const long long int O = powl(N, N);
 
-    // Solution array & number of solutions
-    int* solutionArr = (int*)malloc(pow(N, 5) * sizeof(int)); // Determining array size 
+    //Solutions Array and Number of solutions
+    size_t solutions_mem = pow(N, 5) * sizeof(int*);
+    cudaMalloc((void**)&d_solutions, solutions_mem);
+    cudaMalloc((void**)&d_no_of_sols, sizeof(int));
+
+    // copy host host number of solutions to device number of solutions
+    cudaMemcpy(d_no_of_sols, h_no_of_sols, sizeof(int), cudaMemcpyHostToDevice);
+
+    int offset = 1;
+
+    // Defining grid and blocks
+    int grid = THREADPERBLOCK * 2;
+    int block = THREADPERBLOCK;
+
+    if (O > grid * block)
+        offset = std::ceil((double)O / (grid * block));
+
+    for (long long int i = 0; i < offset; i++) {
+        checkQueenPos << <grid, block >> > (N, O, (long long int)grid * block * i, d_solutions, d_no_of_sols); //kernel for checking the queen positions
+        cudaDeviceSynchronize(); // host device ensures device synchronisation
+    }
+
+    // Copy device number of solutions to host number of solutions
+    cudaMemcpy(h_no_of_sols, d_no_of_sols, sizeof(int), cudaMemcpyDeviceToHost);
+    // Free up memory of device number of solutions
+    cudaFree(d_no_of_sols);
+
+    int* h_solutions = (int*)malloc(solutions_mem);
+    cudaMemcpy(h_solutions, d_solutions, solutions_mem, cudaMemcpyDeviceToHost);
+    cudaFree(d_solutions);
+
+    // Add solutions to the solutions array
+    for (int i = 0; i < *h_no_of_sols; i++) {
+        if (h_solutions[N * i] != NULL) {
+            std::vector<int> solution = std::vector<int>();
+            for (int j = 0; j < N; j++)
+                solution.push_back(h_solutions[N * i + j]);
+            solutions->push_back(solution);
+        }
+    }
+
+    // Free memory of host solutions
+    free(h_solutions);
+}
+
+void calculateAllSolutions(const int N, const bool print)
+{
+    std::vector<std::vector<int>> solutions = std::vector<std::vector<int>>();
     int no_of_sols = 0;
 
-    // Checking all possible Queen Positions
-    for (long long int i = 0; i < O; i++) {
-        bool valid = true;
+    auto startTime = std::chrono::system_clock::now();
+    calculateSolutions(N, &solutions, &no_of_sols);
+    auto stopTime = std::chrono::system_clock::now();
 
-        // Game Board array
-        int gameBoard[N_MAX];
-        long long int column = i;
-
-        for (int j = 0; j < N; j++) {
-            gameBoard[j] = column % N;
-
-            // If the board is not valid, break
-            if (!boardIsValid(j, gameBoard, N)) {
-                valid = false;
-                break;
-            }
-
-            // divide and assign to column
-            column /= N;
-        }
-
-        // If the board is valid, 
-        if (valid) {
-            for (int j = 0; j < N; j++)
-                solutionArr[N * no_of_sols + j] = gameBoard[j];
-            // Increment number of solutions found
-            no_of_sols++;
-        }
-    }
-
-    // Add the solution to the solutions array
-    for (int i = 0; i < no_of_sols; i++) {
-        std::vector<int> solution = std::vector<int>();
-        for (int j = 0; j < N; j++)
-            solution.push_back(solutionArr[N * i + j]);
-        solutions.push_back(solution);
-    }
-    // Free memory
-    free(solutionArr);
-}
-
-// Calculate all solutions given the size of the chessboard
-void calculateAllSolutions(int N, bool print)
-{
-    std::vector<std::vector<int>> solutions;
-
-    // Start timer
-    //auto startTime = omp_get_wtime();
-
-    // Calculate solutions
-    //calculateSolutions(N, solutions);
-
-    // End timer
-    //auto endTime = omp_get_wtime();
-
-    // Calculate time
-   // auto overallTime = endTime - startTime;
-
-    // Print to console
-    std::cout << "N=" << N << " Solution time taken: " << "overalltime" << "s\n";
-    printf("N=%d, solutions=%d\n\n", N, int(solutions.size()));
+    auto timeTaken = std::chrono::duration_cast<std::chrono::microseconds>(stopTime - startTime);
+    std::cout << "N=" << N << " Solution found in: " << timeTaken.count() / 1000000.0 << "s\n";
+    printf("N=%d, solutions=%d\n\n", N, no_of_sols);
 
 }
-
 
 int main(int argc, char** argv)
 {
+    // Helper to exit on first CUDA error
+    gpuErrchk(cudaSetDevice(0));
 
     for (int N = 4; N <= N_MAX; ++N)
         calculateAllSolutions(N, false);
 
     /*
-    // Input Specific N for solution
+// Input Specific N for solution
 {
     int n;
     char c;
@@ -135,8 +163,6 @@ int main(int argc, char** argv)
     do
     {
         cout << "-= NQueens Puzzle Solutions\n";
-        cout << "-= WARNING: N > 9 will take longer to process \n";
-        cout << "-= N = 10 takes around 75 seconds on my PC \n\n";
 
         do
         {
@@ -159,5 +185,4 @@ int main(int argc, char** argv)
     return 0;
 }
 */
-
 }
